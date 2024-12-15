@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Shooter Game</title>
+<style>
+    canvas {
+        display: block;
+        margin: 0 auto;
+        background: linear-gradient(to bottom, #001f3f, #001122);
+        cursor: none;
+    }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const playerWidth = 50;
+    const playerHeight = 30;
+    const bulletWidth = 5;
+    const bulletHeight = 10;
+    const enemyWidth = 40;
+    const enemyHeight = 30;
+
+    let playerX = (canvas.width - playerWidth) / 2;
+    let bullets = [];
+    let enemies = [];
+    let score = 0;
+    let highScore = localStorage.getItem("highScore") || 0;
+    let lives = 3;
+    let gameInterval;
+
+    // Event listeners for PC and mobile
+    document.addEventListener("mousemove", movePlayerSmooth);
+    document.addEventListener("mousedown", shootBullet); // Mouse click for PC
+    canvas.addEventListener("touchstart", handleTouchStart); // Touch for mobile
+
+    function movePlayerSmooth(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        playerX = mouseX - playerWidth / 2;
+        if (playerX < 0) playerX = 0;
+        if (playerX > canvas.width - playerWidth) playerX = canvas.width - playerWidth;
+    }
+
+    function shootBullet(e) {
+        bullets.push({
+        x: playerX + playerWidth / 2 - bulletWidth / 2,
+        y: canvas.height - playerHeight - 20
+        });
+    }
+
+    function handleTouchStart(e) {
+        const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
+        playerX = touchX - playerWidth / 2;
+        if (playerX < 0) playerX = 0;
+        if (playerX > canvas.width - playerWidth) playerX = canvas.width - playerWidth;
+
+      // Fire bullet on touch
+        shootBullet();
+    }
+
+    function spawnEnemy() {
+      const x = Math.random() * (canvas.width - enemyWidth);
+        enemies.push({ x, y: 0 });
+    }
+
+    function drawPlayer() {
+        ctx.fillStyle = "#0ff";
+        ctx.beginPath();
+        ctx.moveTo(playerX, canvas.height - playerHeight - 10);
+        ctx.lineTo(playerX + playerWidth / 2, canvas.height - 10);
+        ctx.lineTo(playerX + playerWidth, canvas.height - playerHeight - 10);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawBullets() {
+        ctx.fillStyle = "#ff0";
+        bullets.forEach((bullet, index) => {
+        ctx.fillRect(bullet.x, bullet.y, bulletWidth, bulletHeight);
+        bullet.y -= 5;
+        if (bullet.y + bulletHeight < 0) {
+            bullets.splice(index, 1);
+        }
+        });
+    }
+
+    function drawEnemies() {
+        ctx.fillStyle = "#f00";
+        enemies.forEach((enemy, index) => {
+        ctx.beginPath();
+        ctx.arc(enemy.x + enemyWidth / 2, enemy.y + enemyHeight / 2, enemyWidth / 2, 0, Math.PI * 2);
+        ctx.fill();
+        enemy.y += 2;
+        if (enemy.y > canvas.height) {
+            enemies.splice(index, 1);
+            loseLife();
+        }
+        });
+    }
+
+    function detectCollisions() {
+        bullets.forEach((bullet, bulletIndex) => {
+        enemies.forEach((enemy, enemyIndex) => {
+            if (
+            bullet.x < enemy.x + enemyWidth &&
+            bullet.x + bulletWidth > enemy.x &&
+            bullet.y < enemy.y + enemyHeight &&
+            bullet.y + bulletHeight > enemy.y
+            ) {
+            bullets.splice(bulletIndex, 1);
+            enemies.splice(enemyIndex, 1);
+            score++;
+            }
+        });
+        });
+    }
+
+    function drawScoreAndLives() {
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#fff";
+        ctx.fillText("Score: " + score, 8, 20);
+        ctx.fillText("High Score: " + highScore, 8, 40);
+        ctx.fillText("Lives: " + lives, canvas.width - 100, 20);
+    }
+
+    function loseLife() {
+        lives--;
+        if (lives <= 0) {
+        endGame();
+        }
+    }
+
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawPlayer();
+        drawBullets();
+        drawEnemies();
+        detectCollisions();
+        drawScoreAndLives();
+    }
+
+    function endGame() {
+        if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("highScore", highScore);
+        }
+        alert("You lost all your lives!\nYour score: " + score + "\nHigh Score: " + highScore);
+        clearInterval(gameInterval);
+        document.location.reload();
+    }
+
+    gameInterval = setInterval(() => {
+        update();
+        if (Math.random() < 0.02) {
+        spawnEnemy();
+        }
+    }, 30);
+</script>
+</body>
+</html>
